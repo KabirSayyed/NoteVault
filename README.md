@@ -8,11 +8,6 @@
 
 
 
-
-
-
-[📥 Download APK](#download) -  [✨ Features](#features) -  [📸 Screenshots](#screenshots) -  [🚀 Getting Started](#getting-started)
-
 </div>
 
 ***
