@@ -1,0 +1,39 @@
+# Built application files
+*.apk
+*.ap_
+*.aab
+
+# Local configuration file (sdk path, etc)
+local.properties
+
+# Gradle files
+.gradle/
+build/
+*/build/
+
+# Android Studio / IntelliJ IDEA Workspace files
+.idea/
+.idea/workspace.xml
+.idea/tasks.xml
+.idea/gradle.xml
+.idea/assetWizardSettings.xml
+.idea/dictionaries
+.idea/libraries
+.idea/caches
+.idea/modules.xml
+*.iml
+*.iws
+
+# Mac OS X hidden files
+.DS_Store
+
+# Keystore files (WARNING: Never commit your actual release keystores to GitHub)
+*.jks
+*.keystore
+
+# NDK / C++ build files
+.externalNativeBuild/
+.cxx/
+
+# Log Files
+*.log
