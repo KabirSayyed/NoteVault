@@ -13,6 +13,9 @@ interface NoteDao {
     @Query("SELECT * FROM notes WHERE isDeleted = 0 AND isArchived = 0 ORDER BY isPinned DESC, updatedAt DESC")
     fun getActiveNotes(): Flow<List<NoteEntity>>
 
+    @Query("SELECT * FROM notes WHERE isDeleted = 0 AND isArchived = 0 ORDER BY isPinned DESC, CASE WHEN :ascending = 1 THEN updatedAt END ASC, CASE WHEN :ascending = 0 THEN updatedAt END DESC")
+    fun getActiveNotesSorted(ascending: Boolean): Flow<List<NoteEntity>>
+
     @Query("SELECT * FROM notes WHERE isDeleted = 1 ORDER BY updatedAt DESC")
     fun getDeletedNotes(): Flow<List<NoteEntity>>
 
@@ -48,4 +51,7 @@ interface NoteDao {
 
     @Query("SELECT * FROM notes WHERE isDeleted = 0 AND (title LIKE '%' || :query || '%' OR content LIKE '%' || :query || '%') ORDER BY isPinned DESC, updatedAt DESC")
     fun searchNotes(query: String): Flow<List<NoteEntity>>
+
+    @Query("SELECT * FROM notes WHERE isDeleted = 0 AND (title LIKE '%' || :query || '%' OR content LIKE '%' || :query || '%') ORDER BY isPinned DESC, CASE WHEN :ascending = 1 THEN updatedAt END ASC, CASE WHEN :ascending = 0 THEN updatedAt END DESC")
+    fun searchNotesSorted(query: String, ascending: Boolean): Flow<List<NoteEntity>>
 }

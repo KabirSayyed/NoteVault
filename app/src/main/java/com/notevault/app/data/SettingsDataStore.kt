@@ -14,6 +14,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 
 object SettingsKeys {
     val FPS_MODE = stringPreferencesKey("fps_mode")
+    val API_KEY = stringPreferencesKey("api_key")
 }
 
 enum class FpsMode(val displayName: String) {
@@ -29,9 +30,25 @@ class SettingsDataStore(private val context: Context) {
         FpsMode.valueOf(fpsModeString)
     }
 
+    val apiKeyFlow: Flow<String> = context.dataStore.data.map { preferences ->
+        preferences[SettingsKeys.API_KEY] ?: ""
+    }
+
     suspend fun setFpsMode(fpsMode: FpsMode) {
         context.dataStore.edit { preferences ->
             preferences[SettingsKeys.FPS_MODE] = fpsMode.name
+        }
+    }
+
+    suspend fun setApiKey(apiKey: String) {
+        context.dataStore.edit { preferences ->
+            preferences[SettingsKeys.API_KEY] = apiKey
+        }
+    }
+
+    suspend fun clearApiKey() {
+        context.dataStore.edit { preferences ->
+            preferences.remove(SettingsKeys.API_KEY)
         }
     }
 

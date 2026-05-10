@@ -15,9 +15,24 @@ class SettingsViewModel(private val settingsDataStore: SettingsDataStore) : View
     val fpsMode: StateFlow<FpsMode> = settingsDataStore.fpsModeFlow
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), FpsMode.FPS_60)
 
+    val apiKey: StateFlow<String> = settingsDataStore.apiKeyFlow
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000L), "")
+
     fun setFpsMode(fpsMode: FpsMode) {
         viewModelScope.launch {
             settingsDataStore.setFpsMode(fpsMode)
+        }
+    }
+
+    fun setApiKey(apiKey: String) {
+        viewModelScope.launch {
+            settingsDataStore.setApiKey(apiKey)
+        }
+    }
+
+    fun clearApiKey() {
+        viewModelScope.launch {
+            settingsDataStore.clearApiKey()
         }
     }
 

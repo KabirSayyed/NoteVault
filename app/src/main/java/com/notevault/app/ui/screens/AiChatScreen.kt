@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material3.CircularProgressIndicator
@@ -35,6 +37,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +48,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.notevault.app.data.SettingsDataStore
 import com.notevault.app.ui.theme.VaultAccent
 import com.notevault.app.ui.theme.VaultBg
 import com.notevault.app.ui.theme.VaultCard
@@ -53,6 +58,8 @@ import com.notevault.app.ui.theme.VaultSurface
 import com.notevault.app.ui.theme.VaultText
 import com.notevault.app.ui.theme.VaultTextFaint
 import com.notevault.app.ui.theme.VaultTextMuted
+import com.notevault.app.viewmodel.SettingsViewModel
+import com.notevault.app.viewmodel.SettingsViewModelFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -63,20 +70,6 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 data class AiMessage(val text: String, val isUser: Boolean)
-
-fun saveApiKey(context: Context, key: String) {
-    context.openFileOutput("api_key.txt", Context.MODE_PRIVATE).use {
-        it.write(key.toByteArray())
-    }
-}
-
-fun loadApiKey(context: Context): String {
-    return try {
-        context.openFileInput("api_key.txt").bufferedReader().readText()
-    } catch (e: Exception) {
-        ""
-    }
-}
 
 suspend fun callGemini(apiKey: String, history: List<AiMessage>, userInput: String): String {
     return withContext(Dispatchers.IO) {
@@ -135,7 +128,11 @@ suspend fun callGemini(apiKey: String, history: List<AiMessage>, userInput: Stri
 @Composable
 fun AiChatScreen(onBack: () -> Unit) {
     val context = LocalContext.current
-    var apiKey by remember { mutableStateOf(loadApiKey(context)) }
+    val settingsViewModel: SettingsViewModel = viewModel(
+        factory = SettingsViewModelFactory(SettingsDataStore(context))
+    )
+
+    val apiKey by settingsViewModel.apiKey.collectAsState()
     var input by remember { mutableStateOf("") }
     var showKeyField by remember { mutableStateOf(apiKey.isEmpty()) }
     var isLoading by remember { mutableStateOf(false) }
@@ -157,7 +154,17 @@ fun AiChatScreen(onBack: () -> Unit) {
                         )
                     }
                 },
+                modifier = Modifier.statusBarsPadding(),
                 actions = {
+                    if (showKeyField && apiKey.isNotEmpty()) {
+                        IconButton(onClick = { settingsViewModel.clearApiKey() }) {
+                            Icon(
+                                imageVector = Icons.Rounded.Clear,
+                                contentDescription = "Clear API key",
+                                tint = VaultTextMuted
+                            )
+                        }
+                    }
                     IconButton(onClick = { showKeyField = !showKeyField }) {
                         Icon(
                             imageVector = Icons.Rounded.Key,
@@ -180,8 +187,7 @@ fun AiChatScreen(onBack: () -> Unit) {
                 OutlinedTextField(
                     value = apiKey,
                     onValueChange = {
-                        apiKey = it
-                        saveApiKey(context, it)
+                        settingsViewModel.setApiKey(it)
                     },
                     modifier = Modifier
                         .fillMaxWidth()

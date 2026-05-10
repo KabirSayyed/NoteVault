@@ -8,11 +8,15 @@ class NoteRepository(private val dao: NoteDao) {
 
     fun getNotes(): Flow<List<NoteEntity>> = dao.getActiveNotes()
 
+    fun getNotesSorted(ascending: Boolean): Flow<List<NoteEntity>> = dao.getActiveNotesSorted(ascending)
+
     fun getTrash(): Flow<List<NoteEntity>> = dao.getDeletedNotes()
 
     fun getArchived(): Flow<List<NoteEntity>> = dao.getArchivedNotes()
 
     fun search(query: String): Flow<List<NoteEntity>> = dao.searchNotes(query)
+
+    fun searchSorted(query: String, ascending: Boolean): Flow<List<NoteEntity>> = dao.searchNotesSorted(query, ascending)
 
     suspend fun getById(id: Long): NoteEntity? = dao.getNoteById(id)
 

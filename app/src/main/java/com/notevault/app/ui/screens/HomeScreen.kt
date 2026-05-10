@@ -14,6 +14,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridItemSpan
@@ -25,11 +29,14 @@ import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DeleteOutline
+import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.List
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.NoteAdd
 import androidx.compose.material.icons.rounded.PushPin
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Sort
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -87,6 +94,8 @@ fun HomeScreen(
 ) {
     val notes by viewModel.notes.collectAsStateWithLifecycle()
     val query by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val sortAscending by viewModel.sortAscending.collectAsStateWithLifecycle()
+    val viewAsList by viewModel.viewAsList.collectAsStateWithLifecycle()
     var showMenu by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -131,6 +140,20 @@ fun HomeScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { viewModel.toggleSortOrder() }) {
+                        Icon(
+                            Icons.Rounded.Sort,
+                            contentDescription = if (sortAscending) "Sort newest first" else "Sort oldest first",
+                            tint = if (sortAscending) VaultAccent else VaultTextMuted
+                        )
+                    }
+                    IconButton(onClick = { viewModel.toggleViewMode() }) {
+                        Icon(
+                            if (viewAsList) Icons.Rounded.GridView else Icons.Rounded.List,
+                            contentDescription = if (viewAsList) "Switch to grid view" else "Switch to list view",
+                            tint = VaultTextMuted
+                        )
+                    }
                     IconButton(onClick = onAi) {
                         Icon(Icons.Rounded.AutoAwesome, contentDescription = "AI", tint = VaultAccent)
                     }
@@ -139,24 +162,17 @@ fun HomeScreen(
                     }
                     DropdownMenu(
                         expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
+                        onDismissRequest = { showMenu = false }
                     ) {
                         DropdownMenuItem(
-                            text = { Text("Archive", color = VaultText) },
-                            onClick = { showMenu = false; onArchive() },
-                            leadingIcon = {
-                                Icon(Icons.Rounded.Archive, contentDescription = null, tint = VaultTextMuted)
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Trash", color = VaultText) },
+                            text = { Text("Trash", color = VaultText, style = MaterialTheme.typography.bodyLarge) },
                             onClick = { showMenu = false; onTrash() },
                             leadingIcon = {
                                 Icon(Icons.Rounded.DeleteOutline, contentDescription = null, tint = VaultTextMuted)
                             }
                         )
                         DropdownMenuItem(
-                            text = { Text("Settings", color = VaultText) },
+                            text = { Text("Settings", color = VaultText, style = MaterialTheme.typography.bodyLarge) },
                             onClick = { showMenu = false; onSettings() },
                             leadingIcon = {
                                 Icon(Icons.Rounded.Settings, contentDescription = null, tint = VaultTextMuted)
@@ -164,7 +180,8 @@ fun HomeScreen(
                         )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = VaultBg)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = VaultBg),
+                modifier = Modifier.statusBarsPadding().padding(top = 8.dp)
             )
         }
     ) { padding ->
@@ -233,22 +250,41 @@ fun HomeScreen(
                     }
                 }
             } else {
-                LazyVerticalStaggeredGrid(
-                    columns = StaggeredGridCells.Adaptive(160.dp),
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalItemSpacing = 10.dp
-                ) {
-                    items(notes, key = { it.id }) { note ->
-                        NoteCard(
-                            note = note,
-                            onClick = { onOpen(note.id) },
-                            onLongClick = { viewModel.togglePin(note.id, note.isPinned) }
-                        )
+                if (viewAsList) {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(notes, key = { it.id }) { note ->
+                            NoteListItem(
+                                note = note,
+                                onClick = { onOpen(note.id) },
+                                onLongClick = { viewModel.togglePin(note.id, note.isPinned) }
+                            )
+                        }
+                        item {
+                            Spacer(modifier = Modifier.height(80.dp))
+                        }
                     }
-                    item(span = StaggeredGridItemSpan.FullLine) {
-                        Spacer(modifier = Modifier.height(80.dp))
+                } else {
+                    LazyVerticalStaggeredGrid(
+                        columns = StaggeredGridCells.Adaptive(160.dp),
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalItemSpacing = 10.dp
+                    ) {
+                        items(notes, key = { it.id }) { note ->
+                            NoteCard(
+                                note = note,
+                                onClick = { onOpen(note.id) },
+                                onLongClick = { viewModel.togglePin(note.id, note.isPinned) }
+                            )
+                        }
+                        item(span = StaggeredGridItemSpan.FullLine) {
+                            Spacer(modifier = Modifier.height(80.dp))
+                        }
                     }
                 }
             }
@@ -264,7 +300,7 @@ fun NoteCard(
     onLongClick: () -> Unit
 ) {
     val cardColor = Color(note.colorHex)
-    val fmt = remember { SimpleDateFormat("MMM dd", Locale.getDefault()) }
+    val fmt = remember { SimpleDateFormat("MMM dd, yyyy • h:mm a", Locale.getDefault()) }
 
     Card(
         modifier = Modifier
@@ -310,8 +346,75 @@ fun NoteCard(
             }
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = fmt.format(Date(note.updatedAt)),
+                text = fmt.format(Date(note.createdAt)),
                 style = MaterialTheme.typography.labelMedium,
+                color = VaultTextFaint
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun NoteListItem(
+    note: NoteEntity,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    val cardColor = Color(note.colorHex)
+    val fmt = remember { SimpleDateFormat("MMM dd, yyyy • h:mm a", Locale.getDefault()) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = cardColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                if (note.isPinned) {
+                    Icon(
+                        imageVector = Icons.Rounded.PushPin,
+                        contentDescription = "Pinned",
+                        tint = VaultAccent,
+                        modifier = Modifier.size(12.dp)
+                    )
+                }
+                if (note.title.isNotBlank()) {
+                    Text(
+                        text = note.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = VaultText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                if (note.content.isNotBlank()) {
+                    Text(
+                        text = note.content,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = VaultTextMuted,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Text(
+                text = fmt.format(Date(note.updatedAt)),
+                style = MaterialTheme.typography.labelSmall,
                 color = VaultTextFaint
             )
         }

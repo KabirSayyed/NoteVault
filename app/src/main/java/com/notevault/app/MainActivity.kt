@@ -11,10 +11,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.notevault.app.data.FpsMode
 import com.notevault.app.data.SettingsDataStore
 import com.notevault.app.ui.navigation.NoteVaultNavGraph
 import com.notevault.app.ui.theme.NoteVaultTheme
@@ -53,7 +51,7 @@ class MainActivity : ComponentActivity() {
                 val vm: NoteViewModel = viewModel(
                     factory = NoteViewModelFactory(app.repository)
                 )
-                FpsSettingsController(settingsDataStore = settingsDataStore) {
+                FpsSettingsController {
                     NoteVaultNavGraph(viewModel = vm)
                 }
             }
@@ -62,12 +60,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun FpsSettingsController(settingsDataStore: SettingsDataStore, content: @Composable () -> Unit) {
-    val fpsMode = settingsDataStore.fpsModeFlow.collectAsState(FpsMode.FPS_60)
+fun FpsSettingsController(content: @Composable () -> Unit) {
     val activity = LocalContext.current as? ComponentActivity
 
-    LaunchedEffect(fpsMode.value) {
-        activity?.let { applyFpsMode(it, fpsMode.value) }
+    LaunchedEffect(Unit) {
+        activity?.let { applyAdaptiveFpsMode(it) }
     }
 
     Box {
@@ -75,20 +72,29 @@ fun FpsSettingsController(settingsDataStore: SettingsDataStore, content: @Compos
     }
 }
 
-private fun applyFpsMode(activity: ComponentActivity, fpsMode: FpsMode) {
+private fun applyAdaptiveFpsMode(activity: ComponentActivity) {
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        val preferredRefreshRate = when (fpsMode) {
-            FpsMode.LOW_FPS -> 30f
-            FpsMode.FPS_60 -> 60f
-            FpsMode.FPS_90 -> 90f
-        }
-        
         try {
+            // Get the device's supported refresh rates
+            val display = activity.windowManager.defaultDisplay
+            val supportedModes = display.supportedModes
+
+            // Find the highest refresh rate supported
+            val maxRefreshRate = supportedModes.maxOfOrNull { it.refreshRate } ?: 60f
+
+            // Use the highest supported refresh rate, capped at reasonable values
+            val preferredRefreshRate = when {
+                maxRefreshRate >= 120f -> 120f  // Cap at 120fps for battery life
+                maxRefreshRate >= 90f -> 90f
+                maxRefreshRate >= 60f -> 60f
+                else -> maxRefreshRate  // Use whatever is available
+            }
+
             activity.window.attributes = activity.window.attributes.apply {
                 this.preferredRefreshRate = preferredRefreshRate
             }
         } catch (e: Exception) {
-            // Fallback if setPreferredRefreshRate not available
+            // Fallback if adaptive refresh rate not available
             e.printStackTrace()
         }
     }
